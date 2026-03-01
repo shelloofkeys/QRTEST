@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Text Scanner</title>
+    <!-- Libreria per scansionare QR -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
+        #reader { width: 100%; max-width: 500px; margin: auto; background: white; }
+        #result-container { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; display: none; }
+        textarea { width: 100%; height: 100px; margin-top: 10px; }
+        button { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #218838; }
+    </style>
+</head>
+<body>
+
+    <h1>QR to File Scanner</h1>
+    <div id="reader"></div>
+
+    <div id="result-container">
+        <h3>Testo Rilevato:</h3>
+        <textarea id="scannedText"></textarea>
+        <br>
+        <button onclick="downloadFile()">Salva come .txt</button>
+    </div>
+
+    <script>
+        const html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+        // Avvia la scansione
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            config, 
+            (decodedText) => {
+                // Cosa succede quando trova un QR
+                document.getElementById('result-container').style.display = 'block';
+                document.getElementById('scannedText').value = decodedText;
+                
+                // Opzionale: ferma la camera dopo la scansione
+                // html5QrCode.stop(); 
+            },
+            (errorMessage) => { /* ignora errori di scansione continua */ }
+        );
+
+        // Funzione per scaricare il file
+        function downloadFile() {
+            const text = document.getElementById('scannedText').value;
+            if (!text) return alert("Nessun testo da salvare");
+
+            const blob = new Blob([text], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            
+            a.href = url;
+            a.download = "testo_scansionato.txt";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
