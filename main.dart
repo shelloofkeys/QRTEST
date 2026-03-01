@@ -1,91 +1,77 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:path_provider/path_provider.dart';
 
-void main() {
-  runApp(const LyricsApp());
-}
+void main() => runApp(const MaterialApp(home: QRToFileApp()));
 
-class LyricsApp extends StatelessWidget {
-  const LyricsApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'QR Lyrics Scanner',
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-      home: const ScannerScreen(),
-    );
-  }
-}
-
-class ScannerScreen extends StatefulWidget {
-  const ScannerScreen({super.key});
+class QRToFileApp extends StatefulWidget {
+  const QRToFileApp({super.key});
 
   @override
-  State<ScannerScreen> createState() => _ScannerScreenState();
+  State<QRToFileApp> createState() => _QRToFileAppState();
 }
 
-class _ScannerScreenState extends State<ScannerScreen> {
-  // Database locale di prova
-  final Map<String, String> lyricsDatabase = {
-    "Albachiara": "Respiri piano per non far rumore...\nTi addormenti di sera...\nE ti risvegli col sole...",
-    "Bohemian Rhapsody": "Is this the real life?\nIs this just fantasy?\nCaught in a landslide...",
-  };
+class _QRToFileAppState extends State<QRToFileApp> {
+  bool isProcessing = false;
 
-  bool isScanning = true;
+  // Funzione che salva il testo nel file
+  Future<void> _saveTextToFile(String text) async {
+    try {
+      // Trova la cartella documenti del dispositivo
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/testi_scansionati.txt');
 
-  void _showLyrics(String content) {
-    setState(() => isScanning = false);
-
-    // Cerca se il contenuto del QR è un titolo nel database, 
-    // altrimenti mostra il contenuto testuale del QR stesso.
-    String textToShow = lyricsDatabase[content] ?? content;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Text(content, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const Divider(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(textToShow, style: const TextStyle(fontSize: 18)),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                setState(() => isScanning = true);
-              },
-              child: const Text("Chiudi e Scansiona ancora"),
-            )
-          ],
-        ),
-      ),
-    ).then((_) => setState(() => isScanning = true));
+      // Scrive il testo aggiungendolo alla fine (append) e aggiunge una riga vuota
+      await file.writeAsString('$text\n---\n', mode: FileMode.append);
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Salvato in: ${file.path}')),
+      );
+    } catch (e) {
+      debugPrint("Errore salvataggio: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Scansiona QR Canzone")),
-      body: isScanning
-          ? MobileScanner(
-              onDetect: (capture) {
-                final List<Barcode> barcodes = capture.barcodes;
-                for (final barcode in barcodes) {
-                  if (barcode.rawValue != null) {
-                    _showLyrics(barcode.rawValue!);
-                    break;
-                  }
+      appBar: AppBar(title: const Text("QR Scanner > Scrittore File")),
+      body: Stack(
+        children: [
+          MobileScanner(
+            onDetect: (capture) async {
+              if (isProcessing) return; // Evita scansioni multiple contemporanee
+
+              final List<Barcode> barcodes = capture.barcodes;
+              for (final barcode in barcodes) {
+                if (barcode.rawValue != null) {
+                  setState(() => isProcessing = true);
+                  
+                  // Salva il testo contenuto nel QR
+                  await _saveTextToFile(barcode.rawValue!);
+                  
+                  // Aspetta 2 secondi prima di permettere un'altra scansione
+                  await Future.delayed(const Duration(seconds: 2));
+                  setState(() => isProcessing = false);
+                  break;
                 }
-              },
-            )
-          : const Center(child: Text("Elaborazione testo...")),
+              }
+            },
+          ),
+          if (isProcessing)
+            const Center(
+              child: Card(
+                color: Colors.black54,
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text("Testo salvato!", style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
