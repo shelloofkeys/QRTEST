@@ -3,65 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Text Scanner</title>
-    <!-- Libreria per scansionare QR -->
+    <title>QR Data Manager</title>
+    <!-- Librerie -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
-        #reader { width: 100%; max-width: 500px; margin: auto; background: white; }
-        #result-container { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; display: none; }
-        textarea { width: 100%; height: 100px; margin-top: 10px; }
-        button { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
-        button:hover { background: #218838; }
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --bg: #f8fafc;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Tabs Navigation */
+        .tabs {
+            display: flex;
+            background: #eee;
+            padding: 5px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            cursor: pointer;
+            background: none;
+            font-weight: 600;
+            color: var(--secondary);
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: var(--primary);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Content Sections */
+        .content {
+            padding: 20px;
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        /* Generator Styles */
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: var(--secondary); }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        button.main-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Scanner Styles */
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px dashed var(--primary);
+            border-radius: 10px;
+            display: none;
+        }
+
+        #qrcode-display {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
 
-    <h1>QR to File Scanner</h1>
-    <div id="reader"></div>
-
-    <div id="result-container">
-        <h3>Testo Rilevato:</h3>
-        <textarea id="scannedText"></textarea>
-        <br>
-        <button onclick="downloadFile()">Salva come .txt</button>
+<div class="app-container">
+    <header>QR DATA TOOL</header>
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('scan-section')">SCANSIONA</button>
+        <button class="tab-btn" onclick="showTab('create-section')">CREA QR</button>
     </div>
 
-    <script>
-        const html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    <!-- SEZIONE SCANNER -->
+    <div id="scan-section" class="content active">
+        <div id="reader"></div>
+        <div id="result-box">
+            <p style="margin-top:0"><strong>Testo rilevato:</strong></p>
+            <textarea id="scannedText" readonly></textarea>
+            <button class="main-btn" style="background: var(--success);" onclick="downloadTxt()">
+                Salva come file .txt
+            </button>
+        </div>
+    </div>
 
-        // Avvia la scansione
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            config, 
-            (decodedText) => {
-                // Cosa succede quando trova un QR
-                document.getElementById('result-container').style.display = 'block';
-                document.getElementById('scannedText').value = decodedText;
-                
-                // Opzionale: ferma la camera dopo la scansione
-                // html5QrCode.stop(); 
-            },
-            (errorMessage) => { /* ignora errori di scansione continua */ }
-        );
+    <!-- SEZIONE GENERATORE -->
+    <div id="create-section" class="content">
+        <div class="input-group">
+            <label>Nome Completo</label>
+            <input type="text" id="gen-nome" placeholder="Es. Mario Rossi">
+        </div>
+        <div class="input-group">
+            <label>Info / Dati Aggiuntivi</label>
+            <textarea id="gen-info" placeholder="Inserisci qui i dati da codificare..."></textarea>
+        </div>
+        <button class="main-btn" onclick="generateQR()">Genera Codice QR</button>
+        
+        <div id="qrcode-display"></div>
+        <p id="hint" style="color:var(--secondary); font-size: 0.8rem; display:none;">
+            Tieni premuto sul QR per salvarlo o fai uno screenshot
+        </p>
+    </div>
+</div>
 
-        // Funzione per scaricare il file
-        function downloadFile() {
-            const text = document.getElementById('scannedText').value;
-            if (!text) return alert("Nessun testo da salvare");
+<script>
+    // --- LOGICA NAVIGAZIONE ---
+    function showTab(tabId) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
 
-            const blob = new Blob([text], { type: "text/plain" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            
-            a.href = url;
-            a.download = "testo_scansionato.txt";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+        // Se passiamo al generatore, fermiamo la camera per risparmiare batteria
+        if (tabId === 'create-section') {
+            stopScanner();
+        } else {
+            startScanner();
         }
-    </script>
+    }
+
+    // --- LOGICA SCANNER ---
+    let html5QrCode;
+
+    function startScanner() {
+        html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+            document.getElementById('result-box').style.display = 'block';
+            document.getElementById('scannedText').value = decodedText;
+            // Opzionale: vibrazione al rilevamento
+            if (navigator.vibrate) navigator.vibrate(100);
+        }).catch(err => console.error("Errore camera:", err));
+    }
+
+    function stopScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => html5QrCode.clear());
+        }
+    }
+
+    function downloadTxt() {
+        const text = document.getElementById('scannedText').value;
+        const blob = new Blob([text], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "dati_scansionati.txt";
+        a.click();
+    }
+
+    // --- LOGICA GENERATORE ---
+    function generateQR() {
+        const nome = document.getElementById('gen-nome').value;
+        const info = document.getElementById('gen-info').value;
+        const display = document.getElementById('qrcode-display');
+        
+        if (!nome && !info) return alert("Inserisci dei dati!");
+
+        display.innerHTML = ""; // Pulisci precedente
+        const finalData = `NOME: ${nome}\nINFO: ${info}\nDATA: ${new Date().toLocaleString()}`;
+
+        new QRCode(display, {
+            text: finalData,
+            width: 250,
+            height: 250,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+        
+        document.getElementById('hint').style.display = 'block';
+    }
+
+    // Avvio iniziale
+    window.onload = startScanner;
+</script>
+
 </body>
 </html>
