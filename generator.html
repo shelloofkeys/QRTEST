@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generatore QR Dati Utente</title>
+    <!-- Libreria per generare QR Code -->
+    <script src="https://cdnjs.cloudflare.com/scriptjs/qr-code-styling/1.5.0/qr-code-styling.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #eef2f3; text-align: center; }
+        .container { max-width: 400px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #333; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        #canvas { margin-top: 20px; }
+        .download-btn { background: #28a745; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Inserisci i tuoi dati</h2>
+        <input type="text" id="nome" placeholder="Nome">
+        <input type="text" id="cognome" placeholder="Cognome">
+        <input type="email" id="email" placeholder="Email">
+        <input type="tel" id="telefono" placeholder="Telefono">
+        
+        <button onclick="generateQR()">Genera QR Code</button>
+        
+        <div id="canvas"></div>
+        <button id="downloadBtn" class="download-btn" onclick="downloadQR()">Scarica Immagine QR</button>
+    </div>
+
+    <script>
+        let qrCode;
+
+        function generateQR() {
+            const nome = document.getElementById('nome').value;
+            const cognome = document.getElementById('cognome').value;
+            const email = document.getElementById('email').value;
+            const telefono = document.getElementById('telefono').value;
+
+            if(!nome || !cognome) {
+                alert("Inserisci almeno Nome e Cognome!");
+                return;
+            }
+
+            // Formattiamo il testo che finirà nel QR (e poi nel file .txt)
+            const datiCompilati = `UTENTE:\nNome: ${nome}\nCognome: ${cognome}\nEmail: ${email}\nTel: ${telefono}`;
+
+            // Puliamo il vecchio QR se esiste
+            document.getElementById("canvas").innerHTML = "";
+
+            // Configuriamo il QR
+            qrCode = new QRCodeStyling({
+                width: 250,
+                height: 250,
+                data: datiCompilati,
+                dotsOptions: { color: "#000", type: "rounded" },
+                backgroundOptions: { color: "#fff" },
+            });
+
+            qrCode.append(document.getElementById("canvas"));
+            document.getElementById("downloadBtn").style.display = "block";
+        }
+
+        function downloadQR() {
+            if (qrCode) {
+                qrCode.download({ name: "mio_qr_dati", extension: "png" });
+            }
+        }
+    </script>
+</body>
+</html>
